@@ -1,15 +1,15 @@
 
 
-#include "MassMatrix.hpp"
+#include "Hlangana_MassMatrix.hpp"
 
-#include "FESpaces.hpp"
-#include "FEQuadrature_Dunavant.hpp"
+#include <Hydrofem_FEBasis.hpp>
+#include <Hydrofem_FEQuadrature.hpp>
 
-MassMatrix::MassMatrix(const Teuchos::RCP< ParGrid2D >& par_grid, Teuchos::RCP< Tpetra::CrsMatrix< double > >& mass_mat) : m_grid(par_grid), m_mat(mass_mat), m_is_computed(false)
-{
-}
 
-void MassMatrix::evaluate()
+namespace hlangana {
+
+void EvaluateMassMatrix(const Teuchos::RCP<const ParMesh>& parMesh,
+                        const Teuchos::RCP<Tpetra::CrsMatrix<double>>& massMatrix)
 {
   for (int elem_ind = 0; elem_ind < int(m_grid->_n_elems_local); ++elem_ind)
   {
@@ -50,13 +50,4 @@ void MassMatrix::evaluate()
   m_is_computed = true;
 }
 
-
-const Teuchos::RCP< Tpetra::CrsMatrix< double > >& MassMatrix::getvalue() const
-{  
-  if (!m_is_computed)
-  {
-    std::cerr << "Error is MassMatrix::getvalue, matrix not computed. Call MassMatrix::evaluate first." << std::endl;
-    exit(1);
-  }
-  return m_mat;
 }

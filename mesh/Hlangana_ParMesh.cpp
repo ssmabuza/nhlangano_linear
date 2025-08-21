@@ -11,8 +11,8 @@
 namespace hlangana
 {
 
-  ParMesh2D::ParMesh2D(const hydrofem::Mesh2D &mesh,
-                       const Teuchos::MpiComm<int> &comm)
+  ParMesh::ParMesh(const hydrofem::Mesh &mesh,
+                   const Teuchos::MpiComm<int> &comm)
   {
     // initilization
     //@{
@@ -88,18 +88,10 @@ namespace hlangana
     idx_t part[n_elems_init_loc];
     //@}
 
-    //! TODO: Pass Zoltan2 function via the MeshInputAdapter
-    // https://docs.trilinos.org/dev/packages/zoltan2/doc/html/Zoltan2__AlgParMETIS_8hpp_source.html
-    //  pass all data into ParMETIS for partitioning
     ParMETIS_V3_PartMeshKway(elmdist, eptr, eind, elmwgt,
                              &wgtflag, &numflag, &ncon, &ncommonnodes,
                              &nparts, tpwgts, ubvec, &options,
                              &edgecut, part, &rawComm);
-
-    if (rank == 0)
-    {
-      std::cout << "edgecut: " << edgecut << std::endl;
-    }
 
     // set number of global elements in mesh
     _n_elems = mesh.numOfElements();
@@ -153,7 +145,6 @@ namespace hlangana
 
         if (p != rank)
         {
-
           MPI_Request request;
           int rc;
           rc = MPI_Isend(&buf[buf.size() - n], n, MPI_INT, p, 0, rawComm, &request);
@@ -161,7 +152,6 @@ namespace hlangana
         }
         else
         {
-
           for (std::size_t j = buf.size() - n; j < buf.size(); j++)
           {
             loc2glob.push_back(buf[j]);
@@ -182,7 +172,6 @@ namespace hlangana
         loc2glob.push_back(buf[i]);
       }
     }
-
     std::sort(loc2glob.begin(), loc2glob.end());
 
     // global to local mapping; should be avoided
@@ -199,16 +188,6 @@ namespace hlangana
 
     displown = displs[rank];
     MPI_Allgatherv(&loc2glob[0], loc2glob.size(), MPI_INT, locs2glob, ntlocals, displs, MPI_INT, rawComm);
-
-    if (rank == 0)
-    {
-      std::cout << "ntlocals:";
-      for (int proc = 0; proc < size; proc++)
-      {
-        std::cout << " " << ntlocals[proc];
-      }
-      std::cout << std::endl;
-    }
 
     glob2locs.resize(_n_elems);
     glob2loc.resize(_n_elems);
@@ -276,16 +255,12 @@ namespace hlangana
       }
     }
 
-    std::cout << "process: " << rank << " number of ghost: " << ghosts.size() << std::endl;
-
-    for (unsigned int i = 0; i < ghosts.size(); i++)
-    {
+    for (std::size_t i = 0; i < ghosts.size(); i++)
       glob2loc[ghosts[i]] = _n_elems_local + i;
-    }
 
     // get the global vertices of the mesh
-    m_points.resize(mesh->m_points.size());
-    for (int i = 0; i < int(mesh->m_points.size()); i++)
+    m_points.resize(mesh->numOfPoints());
+    for (std::size_t i = 0; i < mesh->m_points.size(); i++)
     {
       m_points[i] = mesh->m_points[i];
     }

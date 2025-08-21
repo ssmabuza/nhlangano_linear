@@ -20,9 +20,9 @@ class TrilinosSolverConfig
 public:
 
   TrilinosSolverConfig(const std::shared_ptr<OptionHandler> &optionHandler)
-      : Optionable(optionHandler),
-        mOptionHandler(optionHandler)
+      : Optionable(optionHandler)
   {
+    mOptionHandler = optionHandler;
     optionHandler->parse();
   }
 
