@@ -10,11 +10,16 @@ cmake_minimum_required(VERSION 3.22.0)
 
 project(hlangana)
 
-set(CMAKE_CXX_COMPILER /usr/bin/mpicxx)
+set(CMAKE_CXX_COMPILER mpicxx)
 set(LINKER_LANGUAGE CXX)
 
 set(SOFTWARE "$ENV{SOFTWARE}")
 set(PROJECTS "$ENV{PROJECTS}")
+
+find_package(Boost REQUIRED)
+if (Boost_FOUND)
+  message(STATUS "Found Boost!")
+endif()
 
 set(Trilinos_DIR "${SOFTWARE}/trilinos/lib/cmake/Trilinos")
 message(STATUS "Looking for Trilinos")
@@ -37,7 +42,7 @@ set(EIGEN_DIR "${SOFTWARE}/eigen")
 set(EIGEN_INCLUDE_DIRS "${EIGEN_DIR}/include/eigen3")
 set(EIGEN_LIBRARY_DIRS "${EIGEN_DIR}/lib")
 
-set(CMAKE_CXX_FLAGS "-O3 -lmpi -lparmetis -lmetis -lboost_program_options -L${PARMETIS_LIBRARY_DIRS}")
+set(CMAKE_CXX_FLAGS "-O3 -lmpi -lparmetis -lmetis -lboost_program_options  -Wno-dev -L${PARMETIS_LIBRARY_DIRS}")
 
 set(CORE "./core")
 set(DISC "./disc")
@@ -45,7 +50,7 @@ set(MESH "./mesh")
 set(LINEAR "./linear")
 set(PROJECT_HEADERS "./")
 
-include_directories(${CORE} ${DISC} ${LINEAR} ${PROJECT_HEADERS} ${MESH} ${Trilinos_INCLUDE_DIRS} ${HYDROFEM_INCLUDE_DIRS} ${PARMETIS_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS})
+include_directories(${CORE} ${DISC} ${LINEAR} ${PROJECT_HEADERS} ${MESH} ${Trilinos_INCLUDE_DIRS} ${HYDROFEM_INCLUDE_DIRS} ${PARMETIS_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 link_directories(${Trilinos_LIBRARY_DIRS})
 
 file(GLOB SOURCES "${CORE}/*.cpp"
