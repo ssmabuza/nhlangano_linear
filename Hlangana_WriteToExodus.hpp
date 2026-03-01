@@ -6,13 +6,13 @@
 #include <Thyra_VectorBase.hpp>
 #include <Panzer_ModelEvaluator.hpp>
 #include <Panzer_ResponseLibrary.hpp>
-// #include <Panzer_STK_Interface.hpp>
-#include <Panzer_STK_SetupUtilities.hpp>
+#include <Panzer_STK_Interface.hpp>
 
 namespace hlangana
 {
 
-  inline template <class Scalar>
+  template <class Scalar>
+  inline
   void WriteToExodus(double time_stamp,
                      const Teuchos::RCP<const Thyra::VectorBase<Scalar>> &x,
                      const panzer::ModelEvaluator<Scalar> &model,
