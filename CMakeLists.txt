@@ -21,39 +21,11 @@ if( Trilinos_FOUND )
   message(STATUS "Found Trilinos!")
 endif()
 
-# Some serial impl in the hydrofem library
-# set(HYDROFEM_DIR "${SOFTWARE}/hydrofem")
-# set(HYDROFEM_INCLUDE_DIRS "${HYDROFEM_DIR}/include")
-# set(HYDROFEM_LIBRARY_DIRS "${HYDROFEM_DIR}/lib")
-# set(HYDROFEM_LIBRARIES hydrofem)
-
-# set(PARMETIS_DIR "${SOFTWARE}/parmetis/")
-# set(PARMETIS_INCLUDE_DIRS "${SOFTWARE}/parmetis/include")
-# set(PARMETIS_LIBRARY_DIRS "${SOFTWARE}/parmetis/lib")
-
-# set(EIGEN_DIR "${SOFTWARE}/eigen")
-# set(EIGEN_INCLUDE_DIRS "${EIGEN_DIR}/include/eigen3")
-# set(EIGEN_LIBRARY_DIRS "${EIGEN_DIR}/lib")
-
-
-# set(CORE "./core")
-# set(DISC "./disc")
-# set(MESH "./mesh")
-# set(LINEAR "./linear")
 set(PROJECT_HEADERS "./")
 
-#include_directories(${CORE} ${DISC} ${LINEAR} ${PROJECT_HEADERS} ${MESH} ${Trilinos_INCLUDE_DIRS} ${HYDROFEM_INCLUDE_DIRS} ${PARMETIS_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
-#link_directories(${Trilinos_LIBRARY_DIRS})
-
-# file(GLOB SOURCES "${CORE}/*.cpp"
-#                   "${DISC}/*.cpp"
-#                   "${MESH}/*.cpp"
-#                   "${LINEAR}/*.cpp"
-file(GLOB SOURCES  "${PROJECT_HEADERS}*.cpp")
+file(GLOB SOURCES "${PROJECT_HEADERS}*.cpp")
 
 add_executable(hlangana ${SOURCES})
-
-# target_link_libraries(hlangana LINK_PUBLIC ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES} ${HYDROFEM_LIBRARIES})
 
 target_link_libraries(hlangana LINK_PUBLIC ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 install(TARGETS hlangana RUNTIME DESTINATION bin)

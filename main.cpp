@@ -7,6 +7,9 @@
 #include <iostream>
 
 #include <Teuchos_ParameterList.hpp>
+#include "Hlangana_WriteToExodus.hpp"
+
+using namespace hlangana;
 
 int main(int argc, char **argv)
 {
