@@ -1,27 +1,21 @@
-// ==============================================================================
-//                Hlangana: Copyright S. Mabuza Enterprises LLC
-//
-// Distributed under BSD 3-clause license (See accompanying file Copyright.txt)
-// ==============================================================================
+// driver.hpp
 
-#ifndef __Hlangana_Driver_HPP__
-#define __Hlangana_Driver_HPP__
+#ifndef DRIVER_HPP
+#define DRIVER_HPP
 
-#include "Hlangana.hpp"
+#include <stdexcept>
 
-namespace hlangana
-{
+class Driver {
+public:
+    virtual void start() {
+        throw std::runtime_error("Start method not implemented");
+    }
 
-  class Driver
-  {
-  public:
-    Driver();
-    ~Driver();
+    virtual void stop() {
+        throw std::runtime_error("Stop method not implemented");
+    }
 
-    void setup();
-    void solve();
-  };
+    virtual ~Driver() {}
+};
 
-}
-
-#endif /** __Hlangana_Driver_HPP__ */
+#endif // DRIVER_HPP
