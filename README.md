@@ -1,6 +1,6 @@
 # Flujo
 
-
+![logo](flujo_logo.png)
 
 # Introduction
 
