@@ -1,6 +1,6 @@
 # Flujo
 
-![logo](./docs/flujo_logo.png)
+<img src="./docs/flujo_logo.png" width="200">
 
 # Introduction
 
