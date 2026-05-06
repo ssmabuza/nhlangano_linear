@@ -47,12 +47,12 @@ int main(int argc, char *argv[])
     pout->setShowProcRank(true);
   }
 
-  const auto stackedTimer = Teuchos::rcp(new Teuchos::StackedTimer("Valiant Stacked Timer"));
+  const auto stackedTimer = Teuchos::rcp(new Teuchos::StackedTimer("Flujo Stacked Timer"));
   Teuchos::TimeMonitor::setStackedTimer(stackedTimer);
 
   // print out valiant versioning information
   (*out) << std::endl;
-  (*out) << "                              Welcome to Valiant!                          " << std::endl;
+  (*out) << "                                Welcome to Flujo!                          " << std::endl;
   (*out) << std::endl;
   (*out) << "***************************************************************************" << std::endl;
   out->pushTab(3);
@@ -65,20 +65,20 @@ int main(int argc, char *argv[])
   
   try {
     
-    Teuchos::RCP<Teuchos::Time> total_time = Teuchos::TimeMonitor::getNewTimer("Valiant: Total Time");
+    Teuchos::RCP<Teuchos::Time> total_time = Teuchos::TimeMonitor::getNewTimer("Flujo: Total Time");
     Teuchos::TimeMonitor timer(*total_time); 
     
     // *********************
     // Parse the command line arguments
     // *********************
-    std::string input_file_name = "hlangana.xml";
+    std::string input_file_name = "flujo.xml";
     int num_threads=-1;
     
     // Hard coded to MPI - we do not support a serial build!
     Teuchos::RCP<const Teuchos::MpiComm<int>> comm = Teuchos::createMpiComm<int>(Teuchos::opaqueWrapper(Teuchos::as<MPI_Comm>(MPI_COMM_WORLD)));
     {
       Teuchos::CommandLineProcessor clp;
-      clp.setOption("i", &input_file_name, "Hlangana input xml/yaml filename");
+      clp.setOption("i", &input_file_name, "Flujo input xml/yaml filename");
 
       clp.setOption("kokkos-threads", &num_threads);
       clp.setOption("timings-file",&timingsFile, "File containing the YAML output for the timing data, default don't produce a file");
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
       // *********************
       // Parse the xml input file and broadcast to other processes
       // *********************
-      Teuchos::RCP<Teuchos::ParameterList> input_params = Teuchos::rcp(new Teuchos::ParameterList("Hlangana Parameters"));
+      Teuchos::RCP<Teuchos::ParameterList> input_params = Teuchos::rcp(new Teuchos::ParameterList("Flujo Parameters"));
       {
         const std::string check_xml = ".xml";
         const auto seach_xml = input_file_name.find(check_xml);
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
     Teuchos::TimeMonitor::report(fout,reportParams);
   }
   
-  stackedTimer->stop("Valiant Stacked Timer");
+  stackedTimer->stop("Flujo Stacked Timer");
   Teuchos::StackedTimer::OutputOptions options;
   options.output_fraction = true;
   options.output_minmax = true;
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
   stackedTimer->report(std::cout, Teuchos::DefaultComm<int>::getComm(), options);
 
   if (0 == status)
-    *out << "Valiant run completed." << std::endl;
+    *out << "Flujo run completed." << std::endl;
 
   return status;
 }
