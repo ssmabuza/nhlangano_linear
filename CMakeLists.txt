@@ -6,7 +6,7 @@
 
 cmake_minimum_required(VERSION 3.22.0)
 
-project(hlangana)
+project(flujo)
 
 set(CMAKE_CXX_COMPILER mpicxx)
 set(LINKER_LANGUAGE CXX)
@@ -25,7 +25,7 @@ set(PROJECT_HEADERS "./")
 
 file(GLOB SOURCES "${PROJECT_HEADERS}*.cpp")
 
-add_executable(hlangana ${SOURCES})
+add_executable(flujo_mp.exe ${SOURCES})
 
-target_link_libraries(hlangana LINK_PUBLIC ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
-install(TARGETS hlangana RUNTIME DESTINATION bin)
+target_link_libraries(flujo LINK_PUBLIC ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
+install(TARGETS flujo RUNTIME DESTINATION bin)
