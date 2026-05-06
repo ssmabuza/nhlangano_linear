@@ -1,6 +1,11 @@
+// ==============================================================================
+//                Flujo: Copyright Valiant Scientific
+//
+// Distributed under BSD 3-clause license (See accompanying file Copyright.txt)
+// ==============================================================================
 
-#ifndef WRITE_TO_EXODUS_HPP
-#define WRITE_TO_EXODUS_HPP
+#ifndef __Flujo_WriteToExodus_HPP__
+#define __Flujo_WriteToExodus_HPP__
 
 #include <Teuchos_RCP.hpp>
 #include <Thyra_VectorBase.hpp>
@@ -8,7 +13,7 @@
 #include <Panzer_ResponseLibrary.hpp>
 #include <Panzer_STK_Interface.hpp>
 
-namespace hlangana
+namespace flujo
 {
 
   template <class Scalar>
@@ -34,5 +39,6 @@ namespace hlangana
   }
 
 }
+// end namespace flujo
 
-#endif
+#endif /* __Flujo_WriteToExodus_HPP__ */

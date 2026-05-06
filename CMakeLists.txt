@@ -1,5 +1,5 @@
 # ==============================================================================
-#                Hlangana: Copyright S. Mabuza Enterprises LLC
+#                Flujo: Copyright Valiant Scientific
 # 
 # Distributed under BSD 3-clause license (See accompanying file Copyright.txt)
 # ==============================================================================
