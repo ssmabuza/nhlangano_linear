@@ -4,7 +4,7 @@
 
 # Introduction
 
-The fully parallel multiphysics solver on unstructured meshes based on Panzer and other Trilinos packages.
+The fully parallel multiphysics solver on unstructured meshes based on Panzer, Kokkos and other Trilinos packages.
 
 # Building Dependencies
 
