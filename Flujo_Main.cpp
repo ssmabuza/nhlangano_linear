@@ -4,6 +4,12 @@
 // Distributed under BSD 3-clause license (See accompanying file Copyright.txt)
 // ==============================================================================
 
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <mpi.h>
+
+#include <Kokkos_Core.hpp>
 
 #include <Teuchos_ConfigDefs.hpp>
 #include <Teuchos_RCP.hpp>
@@ -18,18 +24,19 @@
 #include <Teuchos_oblackholestream.hpp>
 #include <Teuchos_Assert.hpp>
 #include <Teuchos_StackedTimer.hpp>
-#include <Kokkos_DefaultNode.hpp>
+// #include <Kokkos_DefaultNode.hpp>
 #include <Phalanx_MDField.hpp>
 
+#include "Flujo_DriverFactory.hpp"
 
 using namespace flujo;
 
 // Bring in the version file, so we can print out the string
 // note that escape sequences in this file: see
 // https://stackoverflow.com/questions/410980/include-a-text-file-in-a-c-program-as-a-char
-const char * version_string = 
-  #include "flujo_version_file.txt"
-  ;
+const char * version_string = {
+#include "flujo_version_file.txt"
+};
 
 int main(int argc, char *argv[])
 {

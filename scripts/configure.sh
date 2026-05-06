@@ -6,7 +6,7 @@ INSTALL_DIR="${HOME}/Software/trilinos"
 
 SOFTWARE="${HOME}/Software"
 
-MPI_DIR="${SOFTWARE}/mpi"
+MPI_DIR="${MPI_DIR}/bin/mpi"
 
 #      -D CMAKE_CXX_FLAGS_DEBUG_OVERRIDE:STRING="-g -O3 -lgfortran -ansi -pedantic -Wall -Wno-long-long -Wno-unused-local-typedefs -Wno-strict-aliasing -DBOOST_NO_HASH -Wno-virtual-move-assign"\
 #       -D CMAKE_CXX_FLAGS:STRING="-g -O3 -fPIC -funroll-loops -ansi -pedantic -ftrapv -Wall -Wno-long-long -Wno-strict-aliasing -DBOOST_NO_HASH -DSKIP_DEPRECATED_STK_MESH_TOPOLOGY_HELPERS" \

@@ -8,8 +8,9 @@ cmake_minimum_required(VERSION 3.22.0)
 
 project(flujo)
 
-set(CMAKE_CXX_COMPILER mpicxx)
+set(CMAKE_CXX_COMPILER ${MPI_DIR}/bin/mpicxx)
 set(LINKER_LANGUAGE CXX)
+set(CMAKE_CXX_STANDARD 20)
 
 set(SOFTWARE "$ENV{SOFTWARE}")
 set(PROJECTS "$ENV{PROJECTS}")
@@ -22,10 +23,11 @@ if( Trilinos_FOUND )
 endif()
 
 set(PROJECT_HEADERS "./")
+include_directories(${PROJECT_HEADERS})
 
 file(GLOB SOURCES "${PROJECT_HEADERS}*.cpp")
 
-add_executable(flujo_mp.exe ${SOURCES})
+add_executable(flujo ${SOURCES})
 
 target_link_libraries(flujo LINK_PUBLIC ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 install(TARGETS flujo RUNTIME DESTINATION bin)
