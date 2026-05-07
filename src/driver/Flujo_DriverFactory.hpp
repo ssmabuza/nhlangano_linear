@@ -25,7 +25,11 @@ public:
    */
   static Teuchos::RCP<Driver> build(Teuchos::RCP<Teuchos::ParameterList> input_params, 
                                     Teuchos::RCP<const Teuchos::Comm<int>> comm) 
-  { return Teuchos::null; }
+  { 
+    TEUCHOS_TEST_FOR_EXCEPTION(true,std::runtime_error,
+                               "ERROR: DriverFactory::build not implemented!");
+    return Teuchos::null; 
+  }
 
 };
 

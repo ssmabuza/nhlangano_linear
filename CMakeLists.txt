@@ -8,19 +8,16 @@ cmake_minimum_required(VERSION 3.22.0)
 
 project(flujo)
 
-set(CMAKE_CXX_COMPILER ${MPI_DIR}/bin/mpicxx)
-set(LINKER_LANGUAGE CXX)
-set(CMAKE_CXX_STANDARD 20)
-
-set(SOFTWARE "$ENV{SOFTWARE}")
-set(PROJECTS "$ENV{PROJECTS}")
-
-set(Trilinos_DIR "${SOFTWARE}/trilinos/lib/cmake/Trilinos")
 message(STATUS "Looking for Trilinos")
 find_package(Trilinos CONFIG REQUIRED)
 if( Trilinos_FOUND )
   message(STATUS "Found Trilinos!")
 endif()
+
+# Use the same compiler as Trilinos
+set(CMAKE_CXX_COMPILER ${MPI_DIR}/bin/mpicxx)
+set(LINKER_LANGUAGE CXX)
+set(CMAKE_CXX_STANDARD 20)
 
 set(PROJECT_HEADERS "./")
 include_directories(${PROJECT_HEADERS})
