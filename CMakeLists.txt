@@ -19,12 +19,17 @@ set(CMAKE_CXX_COMPILER ${MPI_DIR}/bin/mpicxx)
 set(LINKER_LANGUAGE CXX)
 set(CMAKE_CXX_STANDARD 20)
 
-set(PROJECT_HEADERS "./")
-include_directories(${PROJECT_HEADERS})
+add_executable(flujo
+  Flujo_Main.cpp
+  src/driver/Flujo_Driver.cpp
+)
 
-file(GLOB SOURCES "${PROJECT_HEADERS}*.cpp")
-
-add_executable(flujo ${SOURCES})
+target_include_directories(flujo PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/driver"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/closures"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/eqn_sets"
+)
 
 target_link_libraries(flujo LINK_PUBLIC ${Trilinos_LIBRARIES} ${Trilinos_TPL_LIBRARIES})
 install(TARGETS flujo RUNTIME DESTINATION bin)
