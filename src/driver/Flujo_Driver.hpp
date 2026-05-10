@@ -15,7 +15,11 @@
 #include <Teuchos_DefaultComm.hpp>
 #include <Teuchos_DefaultMpiComm.hpp>
 #include <Teuchos_DefaultSerialComm.hpp>
-#include <Teuchos_DefaultOStream.hpp>
+// #include <Teuchos_DefaultOStream.hpp>
+
+#include <Panzer_EquationSet_Factory.hpp>
+#include <Panzer_ClosureModel_Factory_TemplateManager.hpp>
+#include <Panzer_BCStrategy_Factory.hpp>
 
 namespace flujo {
 

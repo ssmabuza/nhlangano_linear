@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
       // Create the driver and solve the problem
       Teuchos::RCP<Driver> driver = DriverFactory::build(input_params,comm);
       // set up the driver using the given parameters
-      driver->setup();
+      driver->setup(input_params);
       // solve the problem and save data
       driver->solve();
     }
