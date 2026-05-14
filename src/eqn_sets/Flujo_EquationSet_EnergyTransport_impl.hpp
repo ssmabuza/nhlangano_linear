@@ -4,8 +4,8 @@
 // Distributed under BSD 3-clause license (See accompanying file Copyright.txt)
 // ==============================================================================
 
-#ifndef __Flujo_EquationSet_ConvectionDiffusionReaction_impl_HPP__
-#define __Flujo_EquationSet_ConvectionDiffusionReaction_impl_HPP__
+#ifndef __Flujo_EquationSet_EnergyTransport_impl_HPP__
+#define __Flujo_EquationSet_EnergyTransport_impl_HPP__
 
 #include "Flujo_Convection.hpp"
 #include "Panzer_BasisIRLayout.hpp"
@@ -20,7 +20,7 @@
 namespace flujo {
 
 template <typename EvalT>
-EquationSet_ConvectionDiffusionReaction<EvalT>::EquationSet_ConvectionDiffusionReaction(
+EquationSet_EnergyTransport<EvalT>::EquationSet_EnergyTransport(
     const Teuchos::RCP<Teuchos::ParameterList>& params,
     const int& default_integration_order,
     const panzer::CellData& cell_data,
@@ -29,28 +29,30 @@ EquationSet_ConvectionDiffusionReaction<EvalT>::EquationSet_ConvectionDiffusionR
     : panzer::EquationSet_DefaultImpl<EvalT>(
           params, default_integration_order, cell_data, global_data, build_transient_support),
       prefix_(""),
-      concentration_name_("conc"),
+      temperature_name_("temperature"),
       density_name_("density"),
+      heat_capacity_name_("heat_capacity"),
+      thermal_conductivity_name_("thermal_conductivity"),
       velocity_name_("velocity"),
-      diffusion_coefficient_name_("diffusion_coefficient"),
-      source_name_("scalar_source"),
-      supg_stabilization_name_("scalar_supg_stabilization"),
+      heat_source_name_("heat_source"),
+      supg_stabilization_name_("energy_supg_stabilization"),
       convection_mode_("ON"),
       convection_in_conservation_form_(true),
       supg_enabled_(false) {
   Teuchos::ParameterList valid_parameters;
   this->setDefaultValidParameters(valid_parameters);
   valid_parameters.set("Model ID", "", "Closure model id associated with this equation set");
-  valid_parameters.set("Prefix", "", "Prefix for multiple scalar transport fields");
+  valid_parameters.set("Prefix", "", "Prefix for multiple energy transport fields");
   valid_parameters.set("Basis Order", 1, "Order of the basis");
   valid_parameters.set("Integration Order", 2, "Order of the integration");
-  valid_parameters.set("Basis Type", "HGrad", "Basis for scalar transport field");
-  valid_parameters.set("Scalar Field Name", concentration_name_, "Primary scalar DOF name");
+  valid_parameters.set("Basis Type", "HGrad", "Basis for temperature field");
+  valid_parameters.set("Temperature Field Name", temperature_name_, "Primary temperature DOF name");
   valid_parameters.set("Density", density_name_, "Closure field for density");
+  valid_parameters.set("Heat Capacity", heat_capacity_name_, "Closure field for heat capacity");
+  valid_parameters.set("Thermal Conductivity", thermal_conductivity_name_,
+                       "Closure field for thermal conductivity");
   valid_parameters.set("Velocity", velocity_name_, "Closure field for velocity");
-  valid_parameters.set("Diffusion Coefficient", diffusion_coefficient_name_,
-                       "Closure field for scalar diffusivity");
-  valid_parameters.set("Source", source_name_, "Closure field for chemical source term");
+  valid_parameters.set("Heat Source", heat_source_name_, "Closure field for energy source term");
   valid_parameters.set("SUPG Stabilization", supg_stabilization_name_,
                        "Closure field for SUPG stabilization contribution");
   valid_parameters.set("Convection", "ON",
@@ -69,25 +71,26 @@ EquationSet_ConvectionDiffusionReaction<EvalT>::EquationSet_ConvectionDiffusionR
   const std::string model_id = params->get<std::string>("Model ID");
 
   prefix_ = params->get<std::string>("Prefix");
-  concentration_name_ = prefix_ + params->get<std::string>("Scalar Field Name");
+  temperature_name_ = prefix_ + params->get<std::string>("Temperature Field Name");
   density_name_ = params->get<std::string>("Density");
+  heat_capacity_name_ = params->get<std::string>("Heat Capacity");
+  thermal_conductivity_name_ = params->get<std::string>("Thermal Conductivity");
   velocity_name_ = params->get<std::string>("Velocity");
-  diffusion_coefficient_name_ = params->get<std::string>("Diffusion Coefficient");
-  source_name_ = params->get<std::string>("Source");
+  heat_source_name_ = params->get<std::string>("Heat Source");
   supg_stabilization_name_ = params->get<std::string>("SUPG Stabilization");
   convection_mode_ = params->get<std::string>("Convection");
   convection_in_conservation_form_ = params->get<bool>("Convection Term is in Conservation Form");
   supg_enabled_ = params->get<std::string>("SUPG") == "ON";
 
-  this->addDOF(concentration_name_, basis_type, basis_order, integration_order);
-  this->addDOFGrad(concentration_name_);
-  this->addDOFTimeDerivative(concentration_name_);
+  this->addDOF(temperature_name_, basis_type, basis_order, integration_order);
+  this->addDOFGrad(temperature_name_);
+  this->addDOFTimeDerivative(temperature_name_);
   this->addClosureModel(model_id);
   this->setupDOFs();
 }
 
 template <typename EvalT>
-void EquationSet_ConvectionDiffusionReaction<EvalT>::buildAndRegisterEquationSetEvaluators(
+void EquationSet_EnergyTransport<EvalT>::buildAndRegisterEquationSetEvaluators(
     PHX::FieldManager<panzer::Traits>& fm,
     const panzer::FieldLibrary&,
     const Teuchos::ParameterList&) const {
@@ -97,19 +100,19 @@ void EquationSet_ConvectionDiffusionReaction<EvalT>::buildAndRegisterEquationSet
   using std::string;
   using std::vector;
 
-  RCP<panzer::IntegrationRule> ir = this->getIntRuleForDOF(concentration_name_);
-  RCP<panzer::BasisIRLayout> basis = this->getBasisIRLayoutForDOF(concentration_name_);
+  RCP<panzer::IntegrationRule> ir = this->getIntRuleForDOF(temperature_name_);
+  RCP<panzer::BasisIRLayout> basis = this->getBasisIRLayoutForDOF(temperature_name_);
 
   vector<string> residual_operator_names;
   if (this->buildTransientSupport()) {
-    const string resid = "RESIDUAL_" + concentration_name_ + "_TIME_OP";
-    ParameterList p("Time Derivative " + concentration_name_);
+    const string resid = "RESIDUAL_" + temperature_name_ + "_TIME_OP";
+    ParameterList p("Time Derivative " + temperature_name_);
     p.set("Residual Name", resid);
-    p.set("Value Name", "DXDT_" + concentration_name_);
+    p.set("Value Name", "DXDT_" + temperature_name_);
     p.set("Basis", basis);
     p.set("IR", ir);
     p.set("Multiplier", 1.0);
-    const vector<string> field_multiplier_names{density_name_};
+    const vector<string> field_multiplier_names{density_name_, heat_capacity_name_};
     p.set("Field Multipliers", Teuchos::rcpFromRef(field_multiplier_names));
     this->template registerEvaluator<EvalT>(
         fm, rcp(new panzer::Integrator_BasisTimesScalar<EvalT, panzer::Traits>(p)));
@@ -118,38 +121,38 @@ void EquationSet_ConvectionDiffusionReaction<EvalT>::buildAndRegisterEquationSet
 
   if (convection_mode_ == "ON") {
     if (convection_in_conservation_form_) {
-      const string resid = "RESIDUAL_" + concentration_name_ + "_CONVECTION";
-      ParameterList p("Convection " + concentration_name_);
+      const string resid = "RESIDUAL_" + temperature_name_ + "_CONVECTION";
+      ParameterList p("Convection " + temperature_name_);
       p.set("Residual Name", resid);
       p.set("Flux Name", velocity_name_);
       p.set("Basis", basis);
       p.set("IR", ir);
       p.set("Multiplier", -1.0);
-      const vector<string> field_multiplier_names{density_name_, concentration_name_};
+      const vector<string> field_multiplier_names{density_name_, heat_capacity_name_, temperature_name_};
       p.set("Field Multipliers", Teuchos::rcpFromRef(field_multiplier_names));
       this->template registerEvaluator<EvalT>(
           fm, rcp(new panzer::Integrator_GradBasisDotVector<EvalT, panzer::Traits>(p)));
       residual_operator_names.push_back(resid);
     } else {
-      const string convection_flux_name = prefix_ + concentration_name_ + "_CONVECTION_OP";
+      const string convection_flux_name = prefix_ + temperature_name_ + "_CONVECTION_OP";
       {
-        ParameterList p("Convection Operator " + concentration_name_);
+        ParameterList p("Convection Operator " + temperature_name_);
         p.set("IR", ir);
         p.set("Operator Name", convection_flux_name);
         p.set("Velocity Name", velocity_name_);
-        p.set("Gradient Name", "GRAD_" + concentration_name_);
+        p.set("Gradient Name", "GRAD_" + temperature_name_);
         p.set("Multiplier", 1.0);
         this->template registerEvaluator<EvalT>(fm, rcp(new Convection<EvalT, panzer::Traits>(p)));
       }
 
-      const string resid = "RESIDUAL_" + concentration_name_ + "_CONVECTION";
-      ParameterList p("Convection Integrator " + concentration_name_);
+      const string resid = "RESIDUAL_" + temperature_name_ + "_CONVECTION";
+      ParameterList p("Convection Integrator " + temperature_name_);
       p.set("Residual Name", resid);
       p.set("Value Name", convection_flux_name);
       p.set("Basis", basis);
       p.set("IR", ir);
       p.set("Multiplier", 1.0);
-      const vector<string> field_multiplier_names{density_name_};
+      const vector<string> field_multiplier_names{density_name_, heat_capacity_name_};
       p.set("Field Multipliers", Teuchos::rcpFromRef(field_multiplier_names));
       this->template registerEvaluator<EvalT>(
           fm, rcp(new panzer::Integrator_BasisTimesScalar<EvalT, panzer::Traits>(p)));
@@ -158,14 +161,14 @@ void EquationSet_ConvectionDiffusionReaction<EvalT>::buildAndRegisterEquationSet
   }
 
   {
-    const string resid = "RESIDUAL_" + concentration_name_ + "_DIFFUSION";
-    ParameterList p("Diffusion " + concentration_name_);
+    const string resid = "RESIDUAL_" + temperature_name_ + "_DIFFUSION";
+    ParameterList p("Diffusion " + temperature_name_);
     p.set("Residual Name", resid);
-    p.set("Flux Name", "GRAD_" + concentration_name_);
+    p.set("Flux Name", "GRAD_" + temperature_name_);
     p.set("Basis", basis);
     p.set("IR", ir);
     p.set("Multiplier", -1.0);
-    const vector<string> field_multiplier_names{diffusion_coefficient_name_};
+    const vector<string> field_multiplier_names{thermal_conductivity_name_};
     p.set("Field Multipliers", Teuchos::rcpFromRef(field_multiplier_names));
     this->template registerEvaluator<EvalT>(
         fm, rcp(new panzer::Integrator_GradBasisDotVector<EvalT, panzer::Traits>(p)));
@@ -173,10 +176,10 @@ void EquationSet_ConvectionDiffusionReaction<EvalT>::buildAndRegisterEquationSet
   }
 
   {
-    const string resid = "RESIDUAL_" + concentration_name_ + "_SOURCE";
-    ParameterList p("Source " + concentration_name_);
+    const string resid = "RESIDUAL_" + temperature_name_ + "_SOURCE";
+    ParameterList p("Heat Source " + temperature_name_);
     p.set("Residual Name", resid);
-    p.set("Value Name", source_name_);
+    p.set("Value Name", heat_source_name_);
     p.set("Basis", basis);
     p.set("IR", ir);
     p.set("Multiplier", -1.0);
@@ -186,8 +189,8 @@ void EquationSet_ConvectionDiffusionReaction<EvalT>::buildAndRegisterEquationSet
   }
 
   if (supg_enabled_) {
-    const string resid = "RESIDUAL_" + concentration_name_ + "_SUPG";
-    ParameterList p("SUPG " + concentration_name_);
+    const string resid = "RESIDUAL_" + temperature_name_ + "_SUPG";
+    ParameterList p("SUPG " + temperature_name_);
     p.set("Residual Name", resid);
     p.set("Value Name", supg_stabilization_name_);
     p.set("Basis", basis);
@@ -198,9 +201,9 @@ void EquationSet_ConvectionDiffusionReaction<EvalT>::buildAndRegisterEquationSet
     residual_operator_names.push_back(resid);
   }
 
-  this->buildAndRegisterResidualSummationEvaluator(fm, concentration_name_, residual_operator_names);
+  this->buildAndRegisterResidualSummationEvaluator(fm, temperature_name_, residual_operator_names);
 }
 
 }  // namespace flujo
 
-#endif /** __Flujo_EquationSet_ConvectionDiffusionReaction_impl_HPP__ */
+#endif /** __Flujo_EquationSet_EnergyTransport_impl_HPP__ */

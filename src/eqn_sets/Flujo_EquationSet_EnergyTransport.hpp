@@ -4,8 +4,8 @@
 // Distributed under BSD 3-clause license (See accompanying file Copyright.txt)
 // ==============================================================================
 
-#ifndef __Flujo_EquationSet_ConvectionDiffusionReaction_HPP__
-#define __Flujo_EquationSet_ConvectionDiffusionReaction_HPP__
+#ifndef __Flujo_EquationSet_EnergyTransport_HPP__
+#define __Flujo_EquationSet_EnergyTransport_HPP__
 
 #include "Panzer_EquationSet_DefaultImpl.hpp"
 #include "Panzer_Traits.hpp"
@@ -15,13 +15,13 @@
 namespace flujo {
 
 template <typename EvalT>
-class EquationSet_ConvectionDiffusionReaction : public panzer::EquationSet_DefaultImpl<EvalT> {
+class EquationSet_EnergyTransport : public panzer::EquationSet_DefaultImpl<EvalT> {
 public:
-  EquationSet_ConvectionDiffusionReaction(const Teuchos::RCP<Teuchos::ParameterList>& params,
-                                          const int& default_integration_order,
-                                          const panzer::CellData& cell_data,
-                                          const Teuchos::RCP<panzer::GlobalData>& global_data,
-                                          const bool build_transient_support);
+  EquationSet_EnergyTransport(const Teuchos::RCP<Teuchos::ParameterList>& params,
+                              const int& default_integration_order,
+                              const panzer::CellData& cell_data,
+                              const Teuchos::RCP<panzer::GlobalData>& global_data,
+                              const bool build_transient_support);
 
   void buildAndRegisterEquationSetEvaluators(
       PHX::FieldManager<panzer::Traits>& fm,
@@ -30,11 +30,12 @@ public:
 
 private:
   std::string prefix_;
-  std::string concentration_name_;
+  std::string temperature_name_;
   std::string density_name_;
+  std::string heat_capacity_name_;
+  std::string thermal_conductivity_name_;
   std::string velocity_name_;
-  std::string diffusion_coefficient_name_;
-  std::string source_name_;
+  std::string heat_source_name_;
   std::string supg_stabilization_name_;
   std::string convection_mode_;
   bool convection_in_conservation_form_;
@@ -43,6 +44,6 @@ private:
 
 }  // namespace flujo
 
-#include "Flujo_EquationSet_ConvectionDiffusionReaction_impl.hpp"
+#include "Flujo_EquationSet_EnergyTransport_impl.hpp"
 
-#endif /** __Flujo_EquationSet_ConvectionDiffusionReaction_HPP__ */
+#endif /** __Flujo_EquationSet_EnergyTransport_HPP__ */

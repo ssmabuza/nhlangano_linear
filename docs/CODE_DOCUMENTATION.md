@@ -1,6 +1,6 @@
 # Flujo source code documentation
 
-This document describes the current **Flujo** codebase: entry point, driver layer, equation sets, boundary-condition strategies, utilities, and how they relate to **Panzer** / **Trilinos**. It reflects the repository as of the last review of all `.cpp` / `.hpp` sources.
+This document describes the current **Flujo** codebase: entry point, driver layer, equation sets, closure models, boundary-condition strategies, utilities, and how they relate to **Panzer** / **Trilinos**. It reflects the repository as of the last review of all `.cpp` / `.hpp` sources.
 
 ---
 
@@ -14,7 +14,7 @@ The program flow is:
 2. Load an XML or YAML parameter list and broadcast it.
 3. Call `DriverFactory::build`, then `Driver::setup`, then `Driver::solve`.
 
-Several integration points are **stubbed** at present (`DriverFactory::build`, `Driver::solve`, and equation-set evaluator registration); see [Implementation status](#implementation-status).
+Several integration points are still **stubbed** at present (`DriverFactory::build`, `Driver::solve`, and evaluator registration for some equation sets); see [Implementation status](#implementation-status).
 
 ---
 
@@ -26,7 +26,9 @@ Several integration points are **stubbed** at present (`DriverFactory::build`, `
 | `Flujo_WriteToExodus.hpp` | Template helper to push solution fields through a Panzer response library and write Exodus via STK. |
 | `src/driver/` | `Driver` base class (mesh + physics + DOFs + worksets); `DriverFactory` (not implemented). |
 | `src/eqn_sets/` | Panzer equation-set templates and `EquationSetFactory`. |
-| `src/closures/` | BC strategy templates and `BCStrategyFactory`. |
+| `src/closures/` | Closure-model factory, custom field evaluators, BC strategy templates, and `BCStrategyFactory`. |
+
+There is no separate `evaluators/` directory. Weak-form residual assembly uses Panzer `Integrator_*` evaluators in equation-set `*_impl.hpp` files. Material and interface fields are produced by custom `PHX::EvaluatorDerived` classes in `src/closures/`.
 
 ---
 
@@ -58,7 +60,7 @@ Flujo code depends on (non-exhaustive):
 
 ### `Driver` (`src/driver/Flujo_Driver.hpp`, `Flujo_Driver.cpp`)
 
-Abstract orchestration class aligned with Panzer “mini-app” patterns: it owns factories for equation sets, closure models, and BC strategies, and Populates Panzer infrastructure from the input list.
+Abstract orchestration class aligned with Panzer “mini-app” patterns: it owns factories for equation sets, closure models, and BC strategies, and populates Panzer infrastructure from the input list.
 
 **Constructor** takes:
 
@@ -104,7 +106,9 @@ Static `build(ParameterList, Comm)` is **not implemented**; it throws and return
 
   | `"Type"` value | Template class |
   |----------------|------------------|
+  | `Biot` | `EquationSet_Biot` |
   | `Convection-Diffusion-Reaction` | `EquationSet_ConvectionDiffusionReaction` |
+  | `Energy-Transport` | `EquationSet_EnergyTransport` |
   | `Maxwell` | `EquationSet_Maxwell` |
   | `Navier-Stokes` | `EquationSet_NavierStokes` |
   | `Poisson` | `EquationSet_Poisson` |
@@ -117,17 +121,86 @@ Each concrete set is a class template `template <typename EvalT> class EquationS
 
 Common pattern:
 
-- Constructor validates a small `ParameterList` (`Model ID`, `Basis Order`, `Integration Order`, plus equation-specific keys).
-- Registers DOFs, gradients/curls and time derivatives as needed, `addClosureModel`, then `setupDOFs()`.
-- `buildAndRegisterEquationSetEvaluators` is overridden but **not implemented** (throws) for all four types.
+- Constructor validates a `ParameterList` (`Model ID`, `Basis Order`, `Integration Order`, plus equation-specific keys).
+- Registers DOFs, gradients/curls/divs and time derivatives as needed, `addClosureModel`, then `setupDOFs()`.
+- `buildAndRegisterEquationSetEvaluators` registers Panzer integrators and, where used, a residual summation evaluator per principal DOF.
 
-**Poisson** (`EquationSet_Poisson`): scalar potential `phi` with `HGrad` basis, gradient DOF.
+**Poisson** (`EquationSet_Poisson`): scalar potential `phi` with `HGrad` basis and gradient DOF. Evaluators are not implemented yet.
 
-**Convection–diffusion–reaction**: scalar `conc`, configurable `Basis Type` (default `HGrad`), gradient and time derivative.
+**Convection–diffusion–reaction** (`EquationSet_ConvectionDiffusionReaction`): scalar transport for species concentration or any conserved scalar `phi` in the form
 
-**Maxwell**: `E_edge` (`HCurl`, curl and time derivative), `B_face` (`HDiv`, time derivative).
+\[
+\frac{\partial (\rho \phi)}{\partial t} + \nabla \cdot (\rho \mathbf{u} \phi) - \nabla \cdot (\Gamma \nabla \phi) = S_{\phi}.
+\]
 
-**Navier–Stokes**: `velocity` and `pressure` with configurable `Velocity Basis Type` / `Pressure Basis Type` (default `HGrad`), 2D/3D only; gradients and velocity time derivative.
+Default DOF name is `conc` (overridable via `Scalar Field Name` and optional `Prefix`). Closure field names are configurable for `Density`, `Velocity`, `Diffusion Coefficient`, `Source`, and `SUPG Stabilization`. `Convection` may be `ON` or `OFF`; `Convection Term is in Conservation Form` selects conservation vs. non-conservation advection assembly; `SUPG` enables an optional residual-based stabilization term driven by the `SUPG Stabilization` closure field.
+
+**Energy transport** (`EquationSet_EnergyTransport`): temperature transport with `rho c_p` on transient and advection terms, thermal conductivity on diffusion, and a configurable heat-source closure. Shares the same convection-form and SUPG switches as the convection–diffusion–reaction set.
+
+**Maxwell** (`EquationSet_Maxwell`): `E_edge` (`HCurl`, curl and time derivative), `B_face` (`HDiv`, time derivative). Evaluators are not implemented yet.
+
+**Navier–Stokes** (`EquationSet_NavierStokes`): `velocity` and `pressure` with configurable `Velocity Basis Type` / `Pressure Basis Type` (default `HGrad`), 2D/3D only; gradients and velocity time derivative. Evaluators are not implemented yet.
+
+**Biot** (`EquationSet_Biot`): coupled solid displacement, pore pressure, and Darcy filtration velocity with poroelastic stress, storage, and Stokes–Biot interface coupling fields supplied through closure models.
+
+### Weak-form assembly pattern
+
+Implemented equation sets follow the same Panzer pattern used in `EquationSet_Biot`:
+
+1. Per DOF, obtain `IntegrationRule` and `BasisIRLayout`.
+2. Per term, build a `Teuchos::ParameterList` with `Residual Name`, `Value Name` or `Flux Name`, `Basis`, `IR`, `Multiplier`, and optional `Field Multipliers`.
+3. Register `panzer::Integrator_BasisTimesScalar`, `Integrator_BasisTimesVector`, `Integrator_GradBasisDotVector`, or `Integrator_DivBasisTimesScalar`.
+4. Collect residual operator names and call `buildAndRegisterResidualSummationEvaluator` for each principal DOF.
+
+The convection–diffusion–reaction and energy-transport sets additionally register the local `Convection` evaluator when advection is assembled in non-conservation form.
+
+---
+
+## Closure models and custom evaluators (`src/closures/`)
+
+### `ClosureModelFactory`
+
+- `ClosureModelFactory<EvalT>` extends `panzer::ClosureModelFactory<EvalT>`.
+- `ClosureModelFactory_TemplateBuilder` builds per-`EvalT` factories for `panzer::ClosureModelFactory_TemplateManager<panzer::Traits>`.
+- `buildClosureModels(model_id, models, ...)` walks the `model_id` sublist in the input closure-model list.
+
+Literal entries:
+
+- `Value` → `panzer::Constant` on integration-point and basis layouts.
+- `Value X` / `Value Y` / `Value Z` → `panzer::ConstantVector`.
+
+Typed entries via `"Type"`:
+
+| `"Type"` | Class | Purpose |
+|----------|-------|---------|
+| `BIOT POROELASTIC STRESS` | `BiotPoroelasticStress` | Poroelastic stress flux from displacement gradient and pore pressure |
+| `STOKES BIOT FLUID TRACTION` | `StokesBiotFluidTraction` | Interface traction from fluid pressure and velocity gradient |
+| `STOKES BIOT NORMAL FILTRATION` | `StokesBiotNormalFiltration` | Normal filtration velocity at a fluid–structure interface |
+| `STOKES BIOT BJS SLIP` | `StokesBiotBeaversJosephSlip` | Beavers–Joseph–Saffman slip velocity |
+| `ARRHENIUS REACTION SOURCE` | `ArrheniusReactionSource` | Pointwise Arrhenius chemical source from temperature and reactant concentration |
+| `SUPG SCALAR TRANSPORT` | `SupgScalarTransport` | Residual-based streamline stabilization field for scalar transport |
+
+### Combustion-oriented closures
+
+**`ArrheniusReactionSource`** evaluates a single-reaction source of the form
+
+\[
+S = A \exp\!\left(-\frac{E_a}{R T}\right) [C]^{n},
+\]
+
+with parameters `Pre-Exponential Factor`, `Activation Energy`, `Gas Constant`, `Reactant Order`, `Temperature Name`, and `Reactant Concentration Name`.
+
+**`SupgScalarTransport`** evaluates a stabilization contribution proportional to
+
+\[
+\tau\,(\mathbf{u}\cdot\nabla\phi - S_{\phi}),
+\]
+
+with `Tau Scale`, `Reference Length`, `Velocity Name`, `Scalar Gradient Name`, and `Source Name`. The equation set integrates this field when `SUPG` is `ON`.
+
+**`Convection`** is registered by the convection–diffusion–reaction and energy-transport equation sets (not through the closure factory) and evaluates `multiplier * u · grad(phi)` for non-conservation advection assembly.
+
+Advection stabilization in the current tree is **residual-based SUPG**. Flux-corrected transport (FCT) limiting is not implemented.
 
 ---
 
@@ -181,7 +254,11 @@ It fills model in-args with `x` and time, runs `stkIOResponseLibrary` residual e
 | `Driver::solve` | Throws — not implemented |
 | `DriverFactory::build` | Throws — not implemented |
 | Equation set DOF registration | Implemented per physics |
-| `buildAndRegisterEquationSetEvaluators` (all four sets) | Throws — not implemented |
+| `buildAndRegisterEquationSetEvaluators` for `Biot` | Implemented |
+| `buildAndRegisterEquationSetEvaluators` for `Convection-Diffusion-Reaction` | Implemented |
+| `buildAndRegisterEquationSetEvaluators` for `Energy-Transport` | Implemented |
+| `buildAndRegisterEquationSetEvaluators` for `Maxwell`, `Navier-Stokes`, `Poisson` | Throws — not implemented |
+| `ClosureModelFactory` typed combustion closures | Implemented (`ARRHENIUS REACTION SOURCE`, `SUPG SCALAR TRANSPORT`) |
 | `BCStrategy_Dirichlet_Constant` | Implemented |
 | `WriteToExodus` | Implemented (header-only helper) |
 
@@ -216,8 +293,17 @@ classDiagram
   class BCStrategyFactory {
     +buildBCStrategy()
   }
+  class ClosureModelFactory~EvalT~ {
+    +buildClosureModels()
+  }
 
+  class EquationSet_Biot~EvalT~ {
+    +buildAndRegisterEquationSetEvaluators()
+  }
   class EquationSet_ConvectionDiffusionReaction~EvalT~ {
+    +buildAndRegisterEquationSetEvaluators()
+  }
+  class EquationSet_EnergyTransport~EvalT~ {
     +buildAndRegisterEquationSetEvaluators()
   }
   class EquationSet_Maxwell~EvalT~ {
@@ -238,7 +324,9 @@ classDiagram
   PanzerEquationSetFactory <|-- EquationSetFactory
   PanzerBCStrategyFactory <|-- BCStrategyFactory
 
+  PanzerEquationSetDefaultImpl <|-- EquationSet_Biot~EvalT~
   PanzerEquationSetDefaultImpl <|-- EquationSet_ConvectionDiffusionReaction~EvalT~
+  PanzerEquationSetDefaultImpl <|-- EquationSet_EnergyTransport~EvalT~
   PanzerEquationSetDefaultImpl <|-- EquationSet_Maxwell~EvalT~
   PanzerEquationSetDefaultImpl <|-- EquationSet_NavierStokes~EvalT~
   PanzerEquationSetDefaultImpl <|-- EquationSet_Poisson~EvalT~
@@ -264,7 +352,7 @@ flowchart TB
   subgraph Factories["Flujo factories"]
     ESF["EquationSetFactory"]
     BCF["BCStrategyFactory"]
-    CM["ClosureModelFactory_TemplateManager\n(not defined in-repo; injected)"]
+    CM["ClosureModelFactory_TemplateManager"]
   end
 
   subgraph PanzerMesh["Panzer / STK runtime objects"]
@@ -292,6 +380,7 @@ flowchart TB
   D --> WS
 
   ESF --> PB
+  CM --> PB
 ```
 
 ### Equation set factory dispatch
@@ -299,7 +388,9 @@ flowchart TB
 ```mermaid
 flowchart LR
   EQ[EquationSetFactory::buildEquationSet]
+  EQ -->|Type = Biot| B[EquationSet_Biot]
   EQ -->|Type = Convection-Diffusion-Reaction| CDR[EquationSet_ConvectionDiffusionReaction]
+  EQ -->|Type = Energy-Transport| ET[EquationSet_EnergyTransport]
   EQ -->|Type = Maxwell| M[EquationSet_Maxwell]
   EQ -->|Type = Navier-Stokes| NS[EquationSet_NavierStokes]
   EQ -->|Type = Poisson| P[EquationSet_Poisson]
@@ -324,22 +415,30 @@ The following top-level sublists are read directly in `Driver::setup`:
 - **`Block ID to Physics ID Mapping`** — drives `panzer::buildBlockIdToPhysicsIdMap`.
 - **`Physics Blocks`** — per-block physics configuration; each block’s equation set `Type` must match one registered in `EquationSetFactory`.
 
+For combustion-style scalar transport, a physics block typically references a `Model ID` closure list that supplies `density`, `velocity`, diffusivity or conductivity, and source terms. Species blocks use `Convection-Diffusion-Reaction`; temperature blocks use `Energy-Transport`. Optional `SUPG` requires both `SUPG = ON` on the equation set and a matching `SUPG SCALAR TRANSPORT` closure entry.
+
+For Stokes–Biot fluid–poroelastic coupling, use `Type: Biot` on the solid block, reference the same `Model ID` on the fluid block, and define material and interface closures as in [BIOT_STOKES_COUPLING.md](BIOT_STOKES_COUPLING.md).
+
 ---
 
 ## File index
 
 | File | Contents |
 |------|----------|
+| `docs/BIOT_STOKES_COUPLING.md` | Biot equation set, Stokes–Biot closures, and coupling input |
+| `docs/CODE_DOCUMENTATION.md` | Repository architecture and implementation status |
 | `Flujo_Main.cpp` | Program entry, CLI, parameter I/O, driver calls |
 | `Flujo_WriteToExodus.hpp` | Exodus write helper |
 | `src/driver/Flujo_Driver.hpp` | `Driver` class declaration |
 | `src/driver/Flujo_Driver.cpp` | `Driver::setup`, `Driver::solve` stub |
 | `src/driver/Flujo_DriverFactory.hpp` | `DriverFactory` stub |
 | `src/eqn_sets/Flujo_EquationSetFactory.hpp` | `EquationSetFactory` |
-| `src/eqn_sets/Flujo_EquationSet_*.{hpp,_impl.hpp}` | Four equation set templates |
+| `src/eqn_sets/Flujo_EquationSet_*.{hpp,_impl.hpp}` | Equation set templates |
+| `src/closures/Flujo_ClosureModel_Factory*.{hpp,_impl.hpp}` | `ClosureModelFactory` and typed closure dispatch |
+| `src/closures/Flujo_*.{hpp,_impl.hpp}` | Custom field evaluators (Biot, Stokes–Biot, combustion) |
 | `src/closures/Flujo_BCStrategy_Factory.hpp` | `BCStrategyFactory` |
 | `src/closures/Flujo_BCStrategy_Dirichlet_Constant*.{hpp,_impl.hpp}` | Constant Dirichlet BC |
 
 ---
 
-*Generated to describe the Flujo repository structure and class relationships; extend this file as implementations land.*
+*Extend this file as implementations land.*
