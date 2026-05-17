@@ -26,7 +26,8 @@ public:
   Teuchos::RCP<panzer::BCStrategy_TemplateManager<panzer::Traits>> buildBCStrategy(
       const panzer::BC& bc,
       const Teuchos::RCP<panzer::GlobalData>& global_data) const override {
-    auto bc_tm = Teuchos::rcp(new panzer::BCStrategy_TemplateManager<panzer::Traits>);
+  Teuchos::RCP<panzer::BCStrategy_TemplateManager<panzer::Traits>> bcs_tm =
+      Teuchos::rcp(new panzer::BCStrategy_TemplateManager<panzer::Traits>);
     bool found = false;
 
     PANZER_BUILD_BCSTRATEGY_OBJECTS("Constant", BCStrategy_Dirichlet_Constant)
@@ -38,7 +39,7 @@ public:
                                                "Relevant boundary condition:\n\n"
                                             << bc << std::endl);
 
-    return bc_tm;
+    return bcs_tm;
   }
 };
 

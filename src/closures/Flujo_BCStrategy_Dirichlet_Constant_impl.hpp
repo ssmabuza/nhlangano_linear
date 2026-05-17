@@ -56,7 +56,7 @@ void BCStrategy_Dirichlet_Constant<EvalT>::buildAndRegisterEvaluators(
     p.set("Name", "Constant_" + this->m_bc.equationSetName());
     p.set("Data Layout", basis_->functional);
     p.set("Value", this->m_bc.params()->template get<double>("Value"));
-    this->template registerEvaluator(fm, Teuchos::rcp(new panzer::Constant<EvalT>(p)));
+    this->template registerEvaluator<EvalT>(fm, Teuchos::rcp(new panzer::Constant<EvalT, panzer::Traits>(p)));
   } else if (basis_->isVectorBasis()) {
     ParameterList p("BC Constant Vector Dirichlet");
     p.set("Name", "Constant_" + this->m_bc.equationSetName());
@@ -64,7 +64,7 @@ void BCStrategy_Dirichlet_Constant<EvalT>::buildAndRegisterEvaluators(
     p.set("Value X", this->m_bc.params()->template get<double>("Value X"));
     if (basis_->dimension() > 1) p.set("Value Y", this->m_bc.params()->template get<double>("Value Y"));
     if (basis_->dimension() > 2) p.set("Value Z", this->m_bc.params()->template get<double>("Value Z"));
-    this->template registerEvaluator(fm, Teuchos::rcp(new panzer::ConstantVector<EvalT>(p)));
+    this->template registerEvaluator<EvalT>(fm, Teuchos::rcp(new panzer::ConstantVector<EvalT, panzer::Traits>(p)));
   } else {
     TEUCHOS_TEST_FOR_EXCEPTION(true, std::logic_error,
                                "Unsupported basis type for flujo::BCStrategy_Dirichlet_Constant");

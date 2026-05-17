@@ -110,7 +110,7 @@ ClosureModelFactory<EvalT>::buildClosureModels(
         ParameterList input;
         input.set("Name", key);
         input.set("Value", plist.get<double>("Value"));
-        const Teuchos::RCP<const panzer::BasisIRLayout> basis_layout = basisIRLayout(*basis, *ir);
+        const Teuchos::RCP<const panzer::BasisIRLayout> basis_layout = panzer::basisIRLayout(basis, *ir);
         input.set("Data Layout", basis_layout->functional);
         evaluators->push_back(rcp(new panzer::Constant<EvalT, panzer::Traits>(input)));
       }

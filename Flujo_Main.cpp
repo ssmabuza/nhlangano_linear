@@ -27,6 +27,7 @@
 // #include <Kokkos_DefaultNode.hpp>
 #include <Phalanx_MDField.hpp>
 
+#include "Flujo_Driver.hpp"
 #include "Flujo_DriverFactory.hpp"
 
 using namespace flujo;

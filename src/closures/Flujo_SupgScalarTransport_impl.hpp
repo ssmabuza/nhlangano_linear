@@ -59,7 +59,7 @@ void SupgScalarTransport<EvalT, Traits>::evaluateFields(typename Traits::EvalDat
           velocity_magnitude += velocity_component * velocity_component;
           advection_residual += velocity_component * scalar_gradient(cell, point, dim);
         }
-        velocity_magnitude = Kokkos::sqrt(velocity_magnitude);
+        velocity_magnitude = std::sqrt(velocity_magnitude);
         const ScalarT tau =
             tau_scale * reference_length / (ScalarT(2.0) * velocity_magnitude + ScalarT(1.0e-12));
         stabilization(cell, point) = tau * (advection_residual - source(cell, point));

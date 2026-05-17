@@ -22,6 +22,7 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(flujo
   Flujo_Main.cpp
   src/driver/Flujo_Driver.cpp
+  src/driver/Flujo_DriverFactory.cpp
 )
 
 target_include_directories(flujo PRIVATE

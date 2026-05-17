@@ -46,7 +46,7 @@ void ArrheniusReactionSource<EvalT, Traits>::evaluateFields(typename Traits::Eva
   const ScalarT pre_exponential_factor = pre_exponential_factor_;
   const ScalarT activation_energy = activation_energy_;
   const ScalarT gas_constant = gas_constant_;
-  const ScalarT reactant_order = reactant_order_;
+  const double reactant_order = reactant_order_;
 
   Kokkos::MDRangePolicy<PHX::exec_space, Kokkos::Rank<2>> policy(
       {0, 0}, {workset.num_cells, source.extent_int(1)});
@@ -57,8 +57,8 @@ void ArrheniusReactionSource<EvalT, Traits>::evaluateFields(typename Traits::Eva
         const ScalarT temperature_value = temperature(cell, point);
         const ScalarT concentration_value = reactant_concentration(cell, point);
         const ScalarT exponent = -activation_energy / (gas_constant * temperature_value);
-        const ScalarT rate = pre_exponential_factor * Kokkos::exp(exponent);
-        source(cell, point) = rate * Kokkos::pow(concentration_value, reactant_order);
+        const ScalarT rate = pre_exponential_factor * std::exp(exponent);
+        source(cell, point) = rate * std::pow(concentration_value, reactant_order);
       });
 }
 
